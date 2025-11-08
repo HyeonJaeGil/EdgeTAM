@@ -7,3 +7,5 @@ __pycache__/
 build/*
 _C.*
 outputs/*
+coreml_models/*
+checkpoints/*.pt
