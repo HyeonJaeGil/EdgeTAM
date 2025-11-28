@@ -480,6 +480,12 @@ class SAM2VideoPredictor(SAM2Base):
                 dtype=torch.float32,
                 device=inference_state["device"],
             ),
+            "ious": torch.full(
+                size=(batch_size, 1),
+                fill_value=1.0,
+                dtype=torch.float32,
+                device=inference_state["device"],
+            ),
         }
         empty_mask_ptr = None
         for obj_idx in range(batch_size):
@@ -700,7 +706,8 @@ class SAM2VideoPredictor(SAM2Base):
             )
             processing_order = range(start_frame_idx, end_frame_idx + 1)
 
-        for frame_idx in tqdm(processing_order, desc="propagate in video"):
+        # for frame_idx in tqdm(processing_order, desc="propagate in video"):
+        for frame_idx in processing_order:
             # We skip those frames already in consolidated outputs (these are frames
             # that received input clicks or mask). Note that we cannot directly run
             # batched forward on them via `_run_single_frame_inference` because the
@@ -766,6 +773,7 @@ class SAM2VideoPredictor(SAM2Base):
                 "pred_masks": current_out["pred_masks"][obj_slice],
                 "obj_ptr": current_out["obj_ptr"][obj_slice],
                 "object_score_logits": current_out["object_score_logits"][obj_slice],
+                "ious": current_out["ious"][obj_slice],
             }
             if maskmem_features is not None:
                 obj_out["maskmem_features"] = maskmem_features[obj_slice]
@@ -967,6 +975,8 @@ class SAM2VideoPredictor(SAM2Base):
         # object pointer is a small tensor, so we always keep it on GPU memory for fast access
         obj_ptr = current_out["obj_ptr"]
         object_score_logits = current_out["object_score_logits"]
+        # ADDED: ious
+        ious = current_out["ious"]
         # make a compact version of this frame's output to reduce the state size
         compact_current_out = {
             "maskmem_features": maskmem_features,
@@ -974,6 +984,7 @@ class SAM2VideoPredictor(SAM2Base):
             "pred_masks": pred_masks,
             "obj_ptr": obj_ptr,
             "object_score_logits": object_score_logits,
+            "ious": ious,
         }
         return compact_current_out, pred_masks_gpu
 
